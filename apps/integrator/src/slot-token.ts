@@ -1,13 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { Result } from "@hippo/contracts";
 import { z } from "zod";
 
 const Payload = z.object({ d: z.uuid(), s: z.iso.datetime(), e: z.number().int() });
 
 export type SlotRef = { doctorId: string; startAt: Date };
-
-export type VerifyResult =
-  | { ok: true; slot: SlotRef }
-  | { ok: false; reason: "invalid" | "expired" };
 
 export class SlotTokens {
   constructor(
@@ -26,20 +23,20 @@ export class SlotTokens {
     return `${payload}.${this.sign(payload)}`;
   }
 
-  verify(token: string, now: Date): VerifyResult {
+  verify(token: string, now: Date): Result<SlotRef, "invalid" | "expired"> {
     const [payload, signature] = token.split(".");
-    if (!payload || !signature) return { ok: false, reason: "invalid" };
+    if (!payload || !signature) return { ok: false, error: "invalid" };
 
     const expected = Buffer.from(this.sign(payload));
     const actual = Buffer.from(signature);
     if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
-      return { ok: false, reason: "invalid" };
+      return { ok: false, error: "invalid" };
     }
 
     const parsed = Payload.safeParse(safeJson(Buffer.from(payload, "base64url").toString()));
-    if (!parsed.success) return { ok: false, reason: "invalid" };
-    if (parsed.data.e * 1000 < now.getTime()) return { ok: false, reason: "expired" };
-    return { ok: true, slot: { doctorId: parsed.data.d, startAt: new Date(parsed.data.s) } };
+    if (!parsed.success) return { ok: false, error: "invalid" };
+    if (parsed.data.e * 1000 < now.getTime()) return { ok: false, error: "expired" };
+    return { ok: true, data: { doctorId: parsed.data.d, startAt: new Date(parsed.data.s) } };
   }
 
   private sign(payload: string): string {

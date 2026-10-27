@@ -1,10 +1,17 @@
-import { type ErrorCode, failure, type ToolResult } from "@hippo/contracts";
+import {
+  type ErrorCode,
+  failure,
+  type Result,
+  type ToolError,
+  type ToolResult,
+} from "@hippo/contracts";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { z } from "zod";
 
 const statusByCode: Record<ErrorCode, ContentfulStatusCode> = {
   VALIDATION_ERROR: 400,
+  UNAUTHORIZED: 401,
   PATIENT_NOT_FOUND: 404,
   NOT_YOUR_APPOINTMENT: 404,
   UNKNOWN_SPECIALTY: 404,
@@ -42,20 +49,17 @@ export function respond(
 export async function parseJson<S extends z.ZodType>(
   c: Context,
   schema: S,
-): Promise<{ ok: true; data: z.infer<S> } | { ok: false; result: ToolResult<never> }> {
+): Promise<Result<z.infer<S>, ToolError>> {
   const body = await c.req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (parsed.success) return { ok: true, data: parsed.data };
   const issue = parsed.error.issues[0];
   const field = issue?.path.join(".") || "body";
-  return {
-    ok: false,
-    result: failure(
-      "VALIDATION_ERROR",
-      `Invalid ${field}: ${issue?.message ?? "malformed request"}.`,
-      {
-        details: { field },
-      },
-    ),
-  };
+  return failure(
+    "VALIDATION_ERROR",
+    `Invalid ${field}: ${issue?.message ?? "malformed request"}.`,
+    {
+      details: { field },
+    },
+  );
 }

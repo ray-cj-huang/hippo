@@ -6,7 +6,7 @@ import {
   VerifyPatientArgs,
 } from "./tools";
 
-export const AvailabilityRequest = GetAvailabilityArgs.extend({ patientId: z.uuid().optional() });
+export const AvailabilityRequest = GetAvailabilityArgs;
 export type AvailabilityRequest = z.infer<typeof AvailabilityRequest>;
 
 export const VerifyPatientRequest = VerifyPatientArgs;
@@ -14,17 +14,13 @@ export type VerifyPatientRequest = z.infer<typeof VerifyPatientRequest>;
 
 export const BookAppointmentRequest = BookAppointmentArgs.omit({ slotId: true }).extend({
   slotToken: z.string().min(1),
-  patientId: z.uuid(),
 });
 export type BookAppointmentRequest = z.infer<typeof BookAppointmentRequest>;
-
-export const CancelAppointmentRequest = z.object({ patientId: z.uuid() });
-export type CancelAppointmentRequest = z.infer<typeof CancelAppointmentRequest>;
 
 export const RescheduleAppointmentRequest = RescheduleAppointmentArgs.omit({
   appointmentId: true,
   slotId: true,
-}).extend({ slotToken: z.string().min(1), patientId: z.uuid() });
+}).extend({ slotToken: z.string().min(1) });
 export type RescheduleAppointmentRequest = z.infer<typeof RescheduleAppointmentRequest>;
 
 export const TOOL_CALL_ID_HEADER = "Idempotency-Key";
@@ -67,13 +63,17 @@ export const AdminSnapshot = z.object({
   appointments: z.array(
     z.object({
       id: z.uuid(),
+      patientId: z.uuid(),
       patientName: z.string(),
+      doctorId: z.uuid(),
       doctorName: z.string(),
       specialty: z.string(),
       startAt: z.string(),
       label: z.string(),
       status: z.enum(["booked", "cancelled"]),
       reason: z.string().nullable(),
+      rescheduledTo: z.uuid().nullable(),
+      rescheduledFrom: z.uuid().nullable(),
       createdAt: z.string(),
     }),
   ),

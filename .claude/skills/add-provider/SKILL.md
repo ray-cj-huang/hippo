@@ -19,7 +19,7 @@ Steps:
 1. Implement the interface in `providers/<kind>/<vendor>.ts`. Import the vendor SDK only there.
 2. Add the value to the zod enum and any keys/options in `apps/phoner/src/config.ts` (the `superRefine` makes required keys fail fast), then a `case` in the factory; the exhaustive switch fails typecheck if you forget.
 3. Add the variables to `.env.example`.
-4. LLM providers: map provider-neutral `LlmMessage`s both ways, keep provider-native content in `AssistantMessage.raw` (thought signatures / thinking blocks must be replayed verbatim), honor the `AbortSignal`, and yield `{ type: "done" }` with all tool calls. Decide whether to filter tools by `allowedTools` or send all (see the Anthropic provider for why it sends all).
+4. LLM providers: map provider-neutral `LlmMessage`s both ways, keep provider-native content in `AssistantMessage.raw` (thought signatures / thinking blocks must be replayed verbatim), honor the `AbortSignal`, and yield `{ type: "done" }` with all tool calls. Decide whether to filter tools by `allowedTools` (Gemini does) or send all; if a vendor invalidates earlier reasoning when the tool list changes, send all and rely on `checkTool`.
 5. Smoke-test against the real API with a throwaway script, then delete it. Check vendor wire formats in their current docs rather than from memory.
 6. Document it in `docs/providers.md`.
 

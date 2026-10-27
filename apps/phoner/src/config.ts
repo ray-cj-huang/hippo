@@ -5,15 +5,15 @@ const Env = z
   .object({
     PHONER_PORT: z.coerce.number().int().default(4000),
     INTEGRATOR_URL: z.url().default("http://localhost:4001"),
+    INTEGRATOR_TOKEN: z.string().min(32, "INTEGRATOR_TOKEN must be at least 32 characters"),
     ALLOWED_ORIGINS: z
       .string()
       .default("http://localhost:3000")
       .transform((v) => v.split(",").map((s) => s.trim())),
 
-    LLM_PROVIDER: z.enum(["google", "anthropic", "scripted"]).default("google"),
+    LLM_PROVIDER: z.enum(["google", "scripted"]).default("google"),
     LLM_MODEL: z.string().optional(),
     GEMINI_API_KEY: z.string().optional(),
-    ANTHROPIC_API_KEY: z.string().optional(),
     SCENARIOS_DIR: z
       .string()
       .default(fileURLToPath(new URL("../../e2e/scenarios", import.meta.url))),
@@ -37,14 +37,12 @@ const Env = z
         ctx.addIssue({ code: "custom", path: [key], message: `${key} is required` });
     };
     need(e.LLM_PROVIDER === "google", "GEMINI_API_KEY");
-    need(e.LLM_PROVIDER === "anthropic", "ANTHROPIC_API_KEY");
     need(e.STT_PROVIDER === "deepgram-flux", "DEEPGRAM_API_KEY");
     need(e.TTS_PROVIDER === "cartesia", "CARTESIA_API_KEY");
   });
 
 const defaultModels = {
   google: "gemini-3.5-flash-lite",
-  anthropic: "claude-haiku-5-5",
   scripted: "scripted",
 } as const;
 
@@ -53,12 +51,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   return {
     port: e.PHONER_PORT,
     integratorUrl: e.INTEGRATOR_URL,
+    integratorToken: e.INTEGRATOR_TOKEN,
     allowedOrigins: e.ALLOWED_ORIGINS,
     llm: {
       provider: e.LLM_PROVIDER,
       model: e.LLM_MODEL ?? defaultModels[e.LLM_PROVIDER],
       geminiApiKey: e.GEMINI_API_KEY ?? "",
-      anthropicApiKey: e.ANTHROPIC_API_KEY ?? "",
       scenariosDir: e.SCENARIOS_DIR,
     },
     stt: {

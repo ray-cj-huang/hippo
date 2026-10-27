@@ -9,7 +9,7 @@ Name is the requested identifier, but names collide (two John Smiths) and STT mi
 
 ## Decision
 
-Identity = normalized first name + last name + DOB, unique in the DB. The agent spells the name back letter by letter and repeats the DOB; `verify_patient` requires `callerConfirmed: true`. Registration of a new patient happens only on a second call with `newPatient: true` after the caller says they're new. After verification, phoner injects `patientId` into appointment tools — the LLM never supplies it.
+Identity = normalized first name + last name + DOB, unique in the DB. The agent spells the name back letter by letter and repeats the DOB; `verify_patient` requires `callerConfirmed: true`. Registration of a new patient happens only on a second call with `newPatient: true` after the caller says they're new. After verification the patient is bound to the call, and the integrator takes `patientId` from the call record — neither the LLM nor the HTTP request supplies it ([ADR 0009](0009-integrator-trusts-the-call.md)).
 
 ## Consequences
 

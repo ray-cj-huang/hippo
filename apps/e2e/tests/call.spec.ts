@@ -26,6 +26,19 @@ test("new patient books an orthopedics appointment and hangs up", async ({ page 
     page.getByTestId("db-appointments").getByTestId("db-row").filter({ hasText: "Maria Gonzalez" }),
   ).toContainText("booked");
 
+  await page
+    .getByTestId("db-appointments")
+    .getByTestId("db-row")
+    .filter({ hasText: "Maria Gonzalez" })
+    .click();
+  const detail = page.getByTestId("db-detail");
+  await expect(detail).toContainText("Orthopedics");
+  await detail.getByTestId("db-row").filter({ hasText: "Maria Gonzalez" }).click();
+  await expect(detail).toContainText("1990-03-03");
+  await page.getByTestId("db-back").click();
+  await page.getByTestId("db-back").click();
+  await expect(page.getByTestId("db-appointments")).toBeVisible();
+
   await say(page, "No, that's all");
   await expect(page.getByTestId("call-status")).toHaveText("Call ended");
 });

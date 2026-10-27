@@ -4,7 +4,7 @@ phoner depends on interfaces, never on vendor SDKs directly. Each vendor is one 
 
 ```
 apps/phoner/src/providers/
-  llm/        provider.ts · google.ts · anthropic.ts · scripted.ts · create.ts
+  llm/        provider.ts · google.ts · scripted.ts · create.ts
   stt/        provider.ts · deepgram-flux.ts · none.ts · create.ts
   tts/        provider.ts · cartesia.ts · silent.ts · create.ts
   guardrail/  guardrail.ts (interface, NoopGuardrail, createGuardrail)
@@ -37,7 +37,7 @@ interface Guardrail {
 }
 ```
 
-Messages are provider-neutral (`{ role: "user" | "assistant" | "tool", ... }`). Each provider maps them to its own wire format (Gemini `contents`/`functionDeclarations`, Anthropic `messages`/`tools`), and maps tool JSON schemas from `@hippo/contracts` (zod → JSON Schema).
+Messages are provider-neutral (`{ role: "user" | "assistant" | "tool", ... }`). Each provider maps them to its own wire format (e.g. Gemini `contents`/`functionDeclarations`), and maps tool JSON schemas from `@hippo/contracts` (zod → JSON Schema).
 
 ## Factory
 
@@ -46,8 +46,6 @@ export function createLlmProvider(config: LlmConfig): LlmProvider {
   switch (config.provider) {
     case "google":
       return new GoogleLlmProvider(config);
-    case "anthropic":
-      return new AnthropicLlmProvider(config);
     case "scripted":
       return new ScriptedLlmProvider(config);
   }
@@ -70,7 +68,6 @@ No other code changes: `CallSession` only sees the interface.
 | Kind      | Name            | Notes                                                                                                                                         |
 | --------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | LLM       | `google`        | Gemini Flash Lite 3.5 via `@google/genai`, streaming + function calling. Default.                                                             |
-| LLM       | `anthropic`     | Claude Haiku 5.5 via `@anthropic-ai/sdk`, streaming + tool use.                                                                               |
 | LLM       | `scripted`      | Replays a scenario file; used by e2e and unit tests.                                                                                          |
 | STT       | `deepgram-flux` | `/v2/listen`, `flux-general-en`, linear16 16 kHz.                                                                                             |
 | STT       | `none`          | Ignores audio; caller turns arrive as typed `user.text`. Used by e2e and the console's text-only mode.                                        |

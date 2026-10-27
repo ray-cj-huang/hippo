@@ -148,7 +148,6 @@ function startSession(
     provider: "scripted",
     model: "scripted",
     geminiApiKey: "",
-    anthropicApiKey: "",
     scenariosDir,
   });
   llm.load(scenario);
@@ -192,10 +191,7 @@ describe("CallSession", () => {
       "/appointments",
     ]);
     const booking = integrator.requests.at(-1);
-    expect(booking?.body).toMatchObject({
-      slotToken: "tok-1",
-      patientId: "00000000-0000-4000-8000-000000001009",
-    });
+    expect(booking?.body).toEqual({ reason: expect.any(String), slotToken: "tok-1" });
     expect(booking?.toolCallId).toBeTruthy();
     expect(transport.of("session.ended")[0]?.reason).toBe("end_call");
   });

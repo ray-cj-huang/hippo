@@ -55,7 +55,6 @@ export class ToolExecutor {
     name: Exclude<ToolName, "end_call">,
     args: Record<string, unknown>,
   ): Omit<ToolRequest, "toolCallId" | "callId"> {
-    const patientId = this.state.patientId ?? undefined;
     const slotToken =
       typeof args.slotId === "string"
         ? (this.slotTokens.get(args.slotId) ?? args.slotId)
@@ -65,13 +64,13 @@ export class ToolExecutor {
         return {
           method: "POST",
           path: "/availability",
-          body: { ...args, patientId },
+          body: args,
           mutating: false,
         };
       case "verify_patient":
         return { method: "POST", path: "/patients/verify", body: args, mutating: true };
       case "list_appointments":
-        return { method: "GET", path: `/patients/${patientId}/appointments`, mutating: false };
+        return { method: "GET", path: "/appointments", mutating: false };
       case "book_appointment":
         return {
           method: "POST",
@@ -80,7 +79,6 @@ export class ToolExecutor {
             reason: args.reason,
             confirmDuplicate: args.confirmDuplicate,
             slotToken,
-            patientId,
           },
           mutating: true,
         };
@@ -88,14 +86,13 @@ export class ToolExecutor {
         return {
           method: "POST",
           path: `/appointments/${args.appointmentId}/cancel`,
-          body: { patientId },
           mutating: true,
         };
       case "reschedule_appointment":
         return {
           method: "POST",
           path: `/appointments/${args.appointmentId}/reschedule`,
-          body: { slotToken, patientId },
+          body: { slotToken },
           mutating: true,
         };
     }

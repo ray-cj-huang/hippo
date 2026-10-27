@@ -9,12 +9,14 @@ The LLM sees seven tools. Six are executed by the integrator over HTTP; `end_cal
 | `get_availability`       | `specialty`, `date` (YYYY-MM-DD, clinic TZ), `doctorId?`               | `slots[]`: `{ slotId, doctorId, doctorName, startAt, label }` (max 12)                                                        | `POST /availability`                |
 | `verify_patient`         | `firstName`, `lastName`, `dob`, `callerConfirmed: true`, `newPatient?` | `{ status: "verified" \| "registered", patientId, firstName, lastName, upcomingAppointments[] }` or error `PATIENT_NOT_FOUND` | `POST /patients/verify`             |
 | `book_appointment`       | `slotId`, `reason`, `confirmDuplicate?`                                | `{ appointmentId, doctorName, startAt, label }`                                                                               | `POST /appointments`                |
-| `list_appointments`      | —                                                                      | `appointments[]`: `{ appointmentId, doctorName, specialty, startAt, label }`                                                  | `GET /patients/:id/appointments`    |
+| `list_appointments`      | —                                                                      | `appointments[]`: `{ appointmentId, doctorName, specialty, startAt, label }`                                                  | `GET /appointments`                 |
 | `cancel_appointment`     | `appointmentId`                                                        | `{ appointmentId, status: "cancelled" }`                                                                                      | `POST /appointments/:id/cancel`     |
 | `reschedule_appointment` | `appointmentId`, `slotId`                                              | `{ appointmentId, previousAppointmentId, doctorName, startAt, label }`                                                        | `POST /appointments/:id/reschedule` |
 | `end_call`               | `reason?`                                                              | —                                                                                                                             | (phoner)                            |
 
-`patientId` is **not** an LLM argument for `book_appointment`, `list_appointments`, `cancel_appointment` or `reschedule_appointment`. phoner injects the verified patient's ID from session state, so the LLM cannot act on behalf of another patient even if it hallucinates an ID.
+`patientId` is **not** an argument anywhere: not from the LLM, and not in the request phoner sends. A successful `verify_patient` records the patient on the call (`calls.patient_id`), and the integrator reads it back from the `X-Call-Id` header for every patient-scoped request. So neither a hallucinated ID nor a direct HTTP request can act on behalf of another patient without verifying them on that call. See [ADR 0009](adr/0009-integrator-trusts-the-call.md).
+
+Every integrator route except `/health` and `/admin/*` requires `Authorization: Bearer $INTEGRATOR_TOKEN`; only phoner holds the token. `/admin/snapshot` exists only when `ADMIN_ENABLED=true` (local development).
 
 `label` is a pre-formatted spoken form ("Wednesday, October 28th at 9:30 AM") so the LLM doesn't do timezone math.
 
@@ -31,7 +33,7 @@ The LLM sees seven tools. Six are executed by the integrator over HTTP; `end_cal
 Enforced twice:
 
 1. **phoner** — gated tools are not offered, and if the model calls one anyway it gets `PATIENT_NOT_IDENTIFIED` or `AVAILABILITY_REQUIRED` without reaching the integrator.
-2. **integrator** — booking and rescheduling require a valid, unexpired, HMAC-signed `slotToken` that only `/availability` issues, and every appointment mutation checks ownership by `patientId`.
+2. **integrator** — booking and rescheduling require a valid, unexpired, HMAC-signed `slotToken` that only `/availability` issues, and every appointment tool acts only for the patient verified on that call (`PATIENT_NOT_IDENTIFIED` otherwise) and checks ownership against that patient.
 
 ## slotToken
 
@@ -58,6 +60,7 @@ type ToolResult<T> =
     };
 ```
 
+- `ToolResult<T>` fits the shared `Result<T, E = Error>` (`{ ok: true; data } | { ok: false; error }`) from `@hippo/contracts`; internal fallible functions return `Result` too, so a `ToolError` failure can be returned as-is.
 - `message` is one or two plain sentences written for the LLM, not the caller. It always states **what changed and what didn't** ("No appointment was created.", "The original appointment is unchanged."), because the worst failure in a voice agent is telling a caller something happened when it didn't.
 - `details` carries data the LLM can act on (alternatives with fresh `slotToken`s, the conflicting appointment, the valid booking window).
 - `retryable` tells the LLM whether calling the same tool again with the same args can succeed.
@@ -178,7 +181,7 @@ Example:
 | `AVAILABILITY_REQUIRED`                | phoner, integrator | no                            | No valid `slotToken`, or availability not checked this call    |
 | `AVAILABILITY_EXPIRED`                 | integrator         | no                            | `slotToken` older than 30 min                                  |
 | `OUTSIDE_BOOKING_WINDOW`               | integrator         | no                            | Date outside tomorrow … +30 days                               |
-| `PATIENT_NOT_IDENTIFIED`               | phoner             | no                            | Appointment tool before `verify_patient` succeeded             |
+| `PATIENT_NOT_IDENTIFIED`               | phoner, integrator | no                            | Appointment tool before `verify_patient` succeeded on the call |
 | `PATIENT_NOT_FOUND`                    | integrator         | no                            | No patient with that name + DOB                                |
 | `PATIENT_TIME_CONFLICT`                | integrator         | no                            | Patient already booked at that time                            |
 | `DUPLICATE_APPOINTMENT`                | integrator         | yes (with `confirmDuplicate`) | Patient already has an upcoming appointment in that specialty  |
@@ -189,6 +192,7 @@ Example:
 | `NO_CHANGE`                            | integrator         | no                            | Reschedule target equals the current slot                      |
 | `UNKNOWN_SPECIALTY` / `UNKNOWN_DOCTOR` | integrator         | no                            | Not in the clinic directory; valid options included            |
 | `VALIDATION_ERROR`                     | phoner, integrator | no                            | Malformed args; `details.field`                                |
+| `UNAUTHORIZED`                         | integrator         | no                            | Missing or wrong `INTEGRATOR_TOKEN` (misconfiguration)         |
 | `SERVICE_UNAVAILABLE`                  | phoner             | yes                           | Integrator unreachable; nothing was sent                       |
 | `OUTCOME_UNKNOWN`                      | phoner             | no                            | A change may or may not have been saved                        |
 | `INTERNAL_ERROR`                       | integrator         | yes (once)                    | Unexpected failure                                             |

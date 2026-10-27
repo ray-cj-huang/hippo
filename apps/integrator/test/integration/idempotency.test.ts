@@ -18,9 +18,10 @@ async function slots() {
 describe("idempotency keys", () => {
   it("replays a retry within the same call", async () => {
     const [slot] = await slots();
-    const body = { patientId: JOHN_1980, slotToken: slot?.slotToken, reason: "ankle" };
-    const first = await t.post("/appointments", body, "tc-1");
-    const retry = await t.post("/appointments", body, "tc-1");
+    const john = await t.caller(JOHN_1980);
+    const body = { slotToken: slot?.slotToken, reason: "ankle" };
+    const first = await john.post("/appointments", body, "tc-1");
+    const retry = await john.post("/appointments", body, "tc-1");
     expect(retry.status).toBe(201);
     expect(retry.body.data).toMatchObject({
       appointmentId: first.body.data.appointmentId,
@@ -37,17 +38,17 @@ describe("idempotency keys", () => {
 
   it("never shares a stored response across calls", async () => {
     const [a, b] = await slots();
-    const first = await t.post(
+    const john = await t.caller(JOHN_1980, CALL_A);
+    const alice = await t.caller(ALICE, CALL_B);
+    const first = await john.post(
       "/appointments",
-      { patientId: JOHN_1980, slotToken: a?.slotToken, reason: "x" },
+      { slotToken: a?.slotToken, reason: "x" },
       "same-id",
-      CALL_A,
     );
-    const second = await t.post(
+    const second = await alice.post(
       "/appointments",
-      { patientId: ALICE, slotToken: b?.slotToken, reason: "x" },
+      { slotToken: b?.slotToken, reason: "x" },
       "same-id",
-      CALL_B,
     );
     expect(second.body.data.replayed).toBeUndefined();
     expect(second.body.data.appointmentId).not.toBe(first.body.data.appointmentId);
@@ -56,14 +57,11 @@ describe("idempotency keys", () => {
 
   it("rejects a reused key with a different request", async () => {
     const [a, b] = await slots();
-    await t.post(
+    const john = await t.caller(JOHN_1980);
+    await john.post("/appointments", { slotToken: a?.slotToken, reason: "x" }, "tc-2");
+    const reused = await john.post(
       "/appointments",
-      { patientId: JOHN_1980, slotToken: a?.slotToken, reason: "x" },
-      "tc-2",
-    );
-    const reused = await t.post(
-      "/appointments",
-      { patientId: JOHN_1980, slotToken: b?.slotToken, reason: "x" },
+      { slotToken: b?.slotToken, reason: "x" },
       "tc-2",
     );
     expect(reused.status).toBe(422);
@@ -73,28 +71,30 @@ describe("idempotency keys", () => {
 
   it("asks the caller to retry while the first attempt holds a fresh lease", async () => {
     const [slot] = await slots();
-    const body = { patientId: JOHN_1980, slotToken: slot?.slotToken, reason: "x" };
-    await t.post("/appointments", body, "tc-3");
+    const john = await t.caller(JOHN_1980);
+    const body = { slotToken: slot?.slotToken, reason: "x" };
+    await john.post("/appointments", body, "tc-3");
     await t.db
       .update(idempotencyKeys)
       .set({ status: "in_progress", lockedUntil: new Date(t.clock.now.getTime() + 10_000) })
       .where(eq(idempotencyKeys.toolCallId, "tc-3"));
-    const busy = await t.post("/appointments", body, "tc-3");
+    const busy = await john.post("/appointments", body, "tc-3");
     expect(busy.status).toBe(409);
     expect(busy.body.error).toMatchObject({ code: "SERVICE_UNAVAILABLE", retryable: true });
   });
 
   it("takes over a key whose lease expired", async () => {
     const [slot] = await slots();
-    const body = { patientId: JOHN_1980, slotToken: slot?.slotToken, reason: "x" };
-    const first = await t.post("/appointments", body, "tc-4");
+    const john = await t.caller(JOHN_1980);
+    const body = { slotToken: slot?.slotToken, reason: "x" };
+    const first = await john.post("/appointments", body, "tc-4");
     await t.db.delete(appointmentEvents);
     await t.db.delete(appointments);
     await t.db
       .update(idempotencyKeys)
       .set({ status: "in_progress", lockedUntil: new Date(t.clock.now.getTime() - 1) })
       .where(eq(idempotencyKeys.toolCallId, "tc-4"));
-    const retry = await t.post("/appointments", body, "tc-4");
+    const retry = await john.post("/appointments", body, "tc-4");
     expect(first.status).toBe(201);
     expect(retry.status).toBe(201);
     expect(retry.body.data.replayed).toBeUndefined();
@@ -104,7 +104,7 @@ describe("idempotency keys", () => {
     const res = await t.call(
       "POST",
       "/appointments",
-      { patientId: JOHN_1980, slotToken: "x", reason: "x" },
+      { slotToken: "x", reason: "x" },
       { "Idempotency-Key": "k" },
     );
     expect(res.status).toBe(400);
@@ -112,11 +112,8 @@ describe("idempotency keys", () => {
 
   it("completes the key in the same transaction as the booking", async () => {
     const [slot] = await slots();
-    await t.post(
-      "/appointments",
-      { patientId: JOHN_1980, slotToken: slot?.slotToken, reason: "x" },
-      "tc-5",
-    );
+    const john = await t.caller(JOHN_1980, CALL_A);
+    await john.post("/appointments", { slotToken: slot?.slotToken, reason: "x" }, "tc-5");
     const [key] = await t.db
       .select()
       .from(idempotencyKeys)

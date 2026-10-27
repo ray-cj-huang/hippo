@@ -19,6 +19,7 @@ export const errorCodes = [
   "UNKNOWN_SPECIALTY",
   "UNKNOWN_DOCTOR",
   "VALIDATION_ERROR",
+  "UNAUTHORIZED",
   "SERVICE_UNAVAILABLE",
   "OUTCOME_UNKNOWN",
   "INTERNAL_ERROR",
@@ -45,6 +46,8 @@ export const ToolError = z.object({
   details: z.record(z.string(), z.unknown()).optional(),
 });
 export type ToolError = z.infer<typeof ToolError>;
+
+export type Result<T, E = Error> = { ok: true; data: T } | { ok: false; error: E };
 
 export type ToolResult<T> =
   | { ok: true; data: T; message: string; warnings?: Warning[] }

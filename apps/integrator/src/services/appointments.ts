@@ -7,7 +7,9 @@ import {
   type ListAppointmentsResult,
   type RescheduleAppointmentRequest,
   type RescheduleAppointmentResult,
+  type Result,
   success,
+  type ToolError,
   type ToolResult,
   type Warning,
 } from "@hippo/contracts";
@@ -84,37 +86,30 @@ export async function listAppointments(ctx: Ctx, patientId: string): Promise<Too
   );
 }
 
-type SlotCheck =
-  | { ok: true; doctor: DoctorRow; slot: SlotRef }
-  | { ok: false; result: ToolResult<never> };
-
-async function checkSlot(ctx: Ctx, slotToken: string, unchanged: string): Promise<SlotCheck> {
+async function checkSlot(
+  ctx: Ctx,
+  slotToken: string,
+  unchanged: string,
+): Promise<Result<{ doctor: DoctorRow; slot: SlotRef }, ToolError>> {
   const verified = ctx.tokens.verify(slotToken, ctx.now());
   if (!verified.ok) {
-    return {
-      ok: false,
-      result:
-        verified.reason === "expired"
-          ? failure(
-              "AVAILABILITY_EXPIRED",
-              `This slot was offered more than ${Math.round(ctx.config.slotTokenTtlSeconds / 60)} minutes ago. ${unchanged} Call get_availability again.`,
-            )
-          : failure(
-              "AVAILABILITY_REQUIRED",
-              `This time did not come from an availability check. ${unchanged} Call get_availability and use a slotToken it returns.`,
-            ),
-    };
+    return verified.error === "expired"
+      ? failure(
+          "AVAILABILITY_EXPIRED",
+          `This slot was offered more than ${Math.round(ctx.config.slotTokenTtlSeconds / 60)} minutes ago. ${unchanged} Call get_availability again.`,
+        )
+      : failure(
+          "AVAILABILITY_REQUIRED",
+          `This time did not come from an availability check. ${unchanged} Call get_availability and use a slotToken it returns.`,
+        );
   }
 
-  const { slot } = verified;
+  const slot = verified.data;
   if (slot.startAt.getTime() <= ctx.now().getTime()) {
-    return {
-      ok: false,
-      result: failure(
-        "SLOT_IN_PAST",
-        `${ctx.time.label(slot.startAt)} has already passed. ${unchanged}`,
-      ),
-    };
+    return failure(
+      "SLOT_IN_PAST",
+      `${ctx.time.label(slot.startAt)} has already passed. ${unchanged}`,
+    );
   }
 
   const [doctor] = await loadDoctors(ctx, { doctorId: slot.doctorId, includeInactive: true });
@@ -126,16 +121,13 @@ async function checkSlot(ctx: Ctx, slotToken: string, unchanged: string): Promis
           startAt: slot.startAt,
         })
       : [];
-    return {
-      ok: false,
-      result: failure(
-        "SLOT_UNAVAILABLE",
-        `${ctx.time.label(slot.startAt)} is no longer on the doctor's schedule. ${unchanged}`,
-        { details: { alternatives } },
-      ),
-    };
+    return failure(
+      "SLOT_UNAVAILABLE",
+      `${ctx.time.label(slot.startAt)} is no longer on the doctor's schedule. ${unchanged}`,
+      { details: { alternatives } },
+    );
   }
-  return { ok: true, doctor, slot };
+  return { ok: true, data: { doctor, slot } };
 }
 
 async function loadPatient(ctx: Ctx, patientId: string) {
@@ -200,15 +192,16 @@ function summary(
 
 export async function bookAppointment(
   ctx: Ctx,
+  patientId: string,
   req: BookAppointmentRequest,
   meta: ActionMeta,
 ): Promise<ToolResult<Booked>> {
   const unchanged = "No appointment was created.";
   const check = await checkSlot(ctx, req.slotToken, unchanged);
-  if (!check.ok) return check.result;
-  const { doctor, slot } = check;
+  if (!check.ok) return check;
+  const { doctor, slot } = check.data;
 
-  const patient = await loadPatient(ctx, req.patientId);
+  const patient = await loadPatient(ctx, patientId);
   if (!patient)
     return failure(
       "PATIENT_NOT_FOUND",
@@ -331,13 +324,14 @@ class Rollback extends Error {}
 export async function rescheduleAppointment(
   ctx: Ctx,
   appointmentId: string,
+  patientId: string,
   req: RescheduleAppointmentRequest,
   meta: ActionMeta,
 ): Promise<ToolResult<Rescheduled>> {
   const [original] = await ctx.db
     .select()
     .from(appointments)
-    .where(and(eq(appointments.id, appointmentId), eq(appointments.patientId, req.patientId)));
+    .where(and(eq(appointments.id, appointmentId), eq(appointments.patientId, patientId)));
   if (!original) {
     return failure(
       "NOT_YOUR_APPOINTMENT",
@@ -354,8 +348,8 @@ export async function rescheduleAppointment(
 
   const unchanged = `The original appointment on ${previousLabel} is unchanged.`;
   const check = await checkSlot(ctx, req.slotToken, unchanged);
-  if (!check.ok) return check.result;
-  const { doctor, slot } = check;
+  if (!check.ok) return check;
+  const { doctor, slot } = check.data;
 
   if (doctor.id === original.doctorId && slot.startAt.getTime() === original.startAt.getTime()) {
     return failure(
@@ -364,7 +358,7 @@ export async function rescheduleAppointment(
     );
   }
 
-  const patient = await loadPatient(ctx, req.patientId);
+  const patient = await loadPatient(ctx, patientId);
   if (!patient)
     return failure(
       "PATIENT_NOT_FOUND",
@@ -409,7 +403,7 @@ export async function rescheduleAppointment(
       const [inserted] = await tx
         .insert(appointments)
         .values({
-          patientId: req.patientId,
+          patientId,
           doctorId: doctor.id,
           startAt: slot.startAt,
           reason: original.reason,
@@ -453,6 +447,6 @@ export async function rescheduleAppointment(
         `The appointment on ${previousLabel} was cancelled in the meantime. Nothing was changed.`,
       );
     }
-    return conflictResult(ctx, req.patientId, doctor, slot.startAt, unchanged);
+    return conflictResult(ctx, patientId, doctor, slot.startAt, unchanged);
   }
 }

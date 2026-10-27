@@ -10,7 +10,7 @@ const now = new Date("2026-11-02T16:00:00Z");
 
 describe("SlotTokens", () => {
   it("round-trips a slot", () => {
-    expect(tokens.verify(tokens.issue(slot, now), now)).toEqual({ ok: true, slot });
+    expect(tokens.verify(tokens.issue(slot, now), now)).toEqual({ ok: true, data: slot });
   });
 
   it("rejects tampered payloads", () => {
@@ -18,11 +18,11 @@ describe("SlotTokens", () => {
     const forged = Buffer.from(
       JSON.stringify({ d: slot.doctorId, s: "2026-11-03T18:00:00.000Z", e: 9e9 }),
     ).toString("base64url");
-    expect(tokens.verify(`${forged}.${sig}`, now)).toEqual({ ok: false, reason: "invalid" });
+    expect(tokens.verify(`${forged}.${sig}`, now)).toEqual({ ok: false, error: "invalid" });
   });
 
   it("expires after the TTL", () => {
     const later = new Date(now.getTime() + 601_000);
-    expect(tokens.verify(tokens.issue(slot, now), later)).toEqual({ ok: false, reason: "expired" });
+    expect(tokens.verify(tokens.issue(slot, now), later)).toEqual({ ok: false, error: "expired" });
   });
 });

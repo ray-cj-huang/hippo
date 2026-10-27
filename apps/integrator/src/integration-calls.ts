@@ -15,6 +15,7 @@ import { claimKey, completeKey, hashRequest, type KeyRef, releaseKey } from "./i
 export type RecorderVariables = {
   integrationCallId: string;
   callId: string | null;
+  patientId: string | null;
   idempotencyKey: KeyRef | null;
 };
 
@@ -45,6 +46,7 @@ export function recordIntegrationCall(db: Db, tool: ToolName, now: () => Date) {
     // phoner may have failed to register the call; the audit log still needs the row.
     if (callId)
       await db.insert(calls).values({ id: callId }).onConflictDoNothing({ target: calls.id });
+    const callPatientId = callId ? await verifiedPatient(db, callId) : null;
 
     const [row] = await db
       .insert(integrationCalls)
@@ -64,7 +66,7 @@ export function recordIntegrationCall(db: Db, tool: ToolName, now: () => Date) {
           httpStatus: status,
           ok: response?.ok ?? false,
           errorCode: response?.error?.code ?? null,
-          patientId: patientIdFrom(request.body) ?? patientIdFrom(response?.data),
+          patientId: patientIdFrom(response?.data) ?? callPatientId,
           replayOf,
           latencyMs: Date.now() - started,
           completedAt: new Date(),
@@ -100,6 +102,7 @@ export function recordIntegrationCall(db: Db, tool: ToolName, now: () => Date) {
 
     c.set("integrationCallId", row.id);
     c.set("callId", callId);
+    c.set("patientId", callPatientId);
     c.set("idempotencyKey", key);
     await next();
 
@@ -119,6 +122,14 @@ export function recordIntegrationCall(db: Db, tool: ToolName, now: () => Date) {
       await db.update(calls).set({ patientId }).where(eq(calls.id, callId));
     }
   });
+}
+
+async function verifiedPatient(db: Db, callId: string): Promise<string | null> {
+  const [call] = await db
+    .select({ patientId: calls.patientId })
+    .from(calls)
+    .where(eq(calls.id, callId));
+  return call?.patientId ?? null;
 }
 
 function markReplayed(stored: Recorded): Recorded {

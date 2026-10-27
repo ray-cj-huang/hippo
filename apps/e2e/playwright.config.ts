@@ -6,6 +6,7 @@ const live = process.argv.includes("--project=live");
 export const E2E_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:54322/hippo_e2e";
 const ports = { web: 3100, phoner: 4100, integrator: 4101 };
 const web = `http://localhost:${ports.web}`;
+const INTEGRATOR_TOKEN = "e2e-integrator-token-0123456789abcdef";
 
 const providers = live
   ? { LLM_PROVIDER: "google", STT_PROVIDER: "none", TTS_PROVIDER: "cartesia" }
@@ -43,6 +44,8 @@ export default defineConfig({
             DATABASE_URL: E2E_DATABASE_URL,
             INTEGRATOR_PORT: String(ports.integrator),
             SLOT_TOKEN_SECRET: "e2e-slot-token-secret-0123456789",
+            INTEGRATOR_TOKEN,
+            ADMIN_ENABLED: "true",
             CORS_ORIGINS: web,
           },
         },
@@ -54,6 +57,7 @@ export default defineConfig({
             ...providers,
             PHONER_PORT: String(ports.phoner),
             INTEGRATOR_URL: `http://localhost:${ports.integrator}`,
+            INTEGRATOR_TOKEN,
             ALLOWED_ORIGINS: web,
           },
         },

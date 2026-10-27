@@ -77,16 +77,18 @@ Tool-call turns are the slow path. The prompt tells the agent to say a short fil
 
 All services validate env with zod at startup and fail fast. Main switches:
 
-| Var                                  | Default                                      | Service        |
-| ------------------------------------ | -------------------------------------------- | -------------- |
-| `LLM_PROVIDER`                       | `google` (`anthropic`, `scripted`)           | phoner         |
-| `LLM_MODEL`                          | Gemini Flash Lite 3.5 model ID               | phoner         |
-| `STT_PROVIDER`                       | `deepgram-flux` (`scripted`)                 | phoner         |
-| `TTS_PROVIDER`                       | `cartesia` (`silent`)                        | phoner         |
-| `GUARDRAIL`                          | `noop`                                       | phoner         |
-| `INTEGRATOR_URL`                     | `http://localhost:4001`                      | phoner         |
-| `DATABASE_URL`, `DATABASE_POOL_MODE` | local Postgres (`docker compose`), `session` | integrator, db |
-| `SLOT_TOKEN_SECRET`                  | — (required)                                 | integrator     |
-| `CLINIC_TIMEZONE`                    | `America/Los_Angeles`                        | integrator     |
+| Var                                  | Default                                      | Service            |
+| ------------------------------------ | -------------------------------------------- | ------------------ |
+| `LLM_PROVIDER`                       | `google` (`scripted`)                        | phoner             |
+| `LLM_MODEL`                          | Gemini Flash Lite 3.5 model ID               | phoner             |
+| `STT_PROVIDER`                       | `deepgram-flux` (`scripted`)                 | phoner             |
+| `TTS_PROVIDER`                       | `cartesia` (`silent`)                        | phoner             |
+| `GUARDRAIL`                          | `noop`                                       | phoner             |
+| `INTEGRATOR_URL`                     | `http://localhost:4001`                      | phoner             |
+| `INTEGRATOR_TOKEN`                   | — (required, same value in both)             | phoner, integrator |
+| `DATABASE_URL`, `DATABASE_POOL_MODE` | local Postgres (`docker compose`), `session` | integrator, db     |
+| `SLOT_TOKEN_SECRET`                  | — (required)                                 | integrator         |
+| `ADMIN_ENABLED`                      | `false` (`.env.example` sets `true`)         | integrator         |
+| `CLINIC_TIMEZONE`                    | `America/Los_Angeles`                        | integrator         |
 
 Full list in `.env.example`.

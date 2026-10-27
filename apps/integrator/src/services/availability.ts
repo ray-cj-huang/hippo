@@ -18,6 +18,7 @@ const MAX_SLOTS = 12;
 export async function getAvailability(
   ctx: Ctx,
   req: AvailabilityRequest,
+  patientId: string | null,
 ): Promise<ToolResult<AvailabilityResult>> {
   const warnings: Warning[] = [];
   let specialtyId = req.specialty;
@@ -67,8 +68,8 @@ export async function getAvailability(
     );
   }
 
-  if (req.patientId) {
-    const [patient] = await ctx.db.select().from(patients).where(eq(patients.id, req.patientId));
+  if (patientId) {
+    const [patient] = await ctx.db.select().from(patients).where(eq(patients.id, patientId));
     const restriction =
       patient && ageRestriction(ctx, specialty, patient.dob, ctx.time.instant(req.date, "12:00"));
     if (restriction) warnings.push({ code: "AGE_RESTRICTED", message: restriction.message });

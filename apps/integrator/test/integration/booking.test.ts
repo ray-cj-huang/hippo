@@ -1,3 +1,4 @@
+import type { AdminSnapshot } from "@hippo/contracts";
 import { appointmentEvents, appointments, integrationCalls } from "@hippo/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -99,9 +100,10 @@ describe("verify_patient", () => {
 describe("book_appointment", () => {
   it("books, records history and logs the integration call", async () => {
     const slot = await firstSlot();
-    const res = await t.post(
+    const john = await t.caller(JOHN_1980);
+    const res = await john.post(
       "/appointments",
-      { patientId: JOHN_1980, slotToken: slot.slotToken, reason: "ankle" },
+      { slotToken: slot.slotToken, reason: "ankle" },
       "tc-1",
     );
     expect(res.status).toBe(201);
@@ -138,13 +140,10 @@ describe("book_appointment", () => {
         }),
       ),
     );
+    const callers = await Promise.all(patients.map((p) => t.caller(p.body.data.patientId)));
     const results = await Promise.all(
-      patients.map((p, i) =>
-        t.post(
-          "/appointments",
-          { patientId: p.body.data.patientId, slotToken: slot.slotToken, reason: "race" },
-          `race-${i}`,
-        ),
+      callers.map((c, i) =>
+        c.post("/appointments", { slotToken: slot.slotToken, reason: "race" }, `race-${i}`),
       ),
     );
     const wins = results.filter((r) => r.body.ok);
@@ -158,37 +157,27 @@ describe("book_appointment", () => {
   });
 
   it("rejects slots that did not come from availability", async () => {
-    const res = await t.post("/appointments", {
-      patientId: JOHN_1980,
-      slotToken: "made.up",
-      reason: "x",
-    });
+    const john = await t.caller(JOHN_1980);
+    const res = await john.post("/appointments", { slotToken: "made.up", reason: "x" });
     expect(res.body.error?.code).toBe("AVAILABILITY_REQUIRED");
   });
 
   it("rejects expired slot tokens", async () => {
     const slot = await firstSlot();
     t.clock.now = new Date(t.clock.now.getTime() + 31 * 60_000);
-    const res = await t.post("/appointments", {
-      patientId: JOHN_1980,
-      slotToken: slot.slotToken,
-      reason: "x",
-    });
+    const john = await t.caller(JOHN_1980);
+    const res = await john.post("/appointments", { slotToken: slot.slotToken, reason: "x" });
     expect(res.body.error?.code).toBe("AVAILABILITY_EXPIRED");
   });
 
   it("asks before a second appointment in the same specialty", async () => {
     const [a, b] = (await t.post("/availability", { specialty: "orthopedics", date: TUESDAY })).body
       .data.slots;
-    await t.post("/appointments", { patientId: ALICE, slotToken: a.slotToken, reason: "knee" });
-    const dup = await t.post("/appointments", {
-      patientId: ALICE,
-      slotToken: b.slotToken,
-      reason: "knee",
-    });
+    const alice = await t.caller(ALICE);
+    await alice.post("/appointments", { slotToken: a.slotToken, reason: "knee" });
+    const dup = await alice.post("/appointments", { slotToken: b.slotToken, reason: "knee" });
     expect(dup.body.error).toMatchObject({ code: "DUPLICATE_APPOINTMENT", retryable: true });
-    const confirmed = await t.post("/appointments", {
-      patientId: ALICE,
+    const confirmed = await alice.post("/appointments", {
       slotToken: b.slotToken,
       reason: "knee",
       confirmDuplicate: true,
@@ -198,11 +187,8 @@ describe("book_appointment", () => {
 
   it("redirects adults away from pediatrics", async () => {
     const slot = await firstSlot("pediatrics");
-    const res = await t.post("/appointments", {
-      patientId: ALICE,
-      slotToken: slot.slotToken,
-      reason: "checkup",
-    });
+    const alice = await t.caller(ALICE);
+    const res = await alice.post("/appointments", { slotToken: slot.slotToken, reason: "checkup" });
     expect(res.body.error).toMatchObject({
       code: "AGE_RESTRICTED",
       details: { suggestedSpecialty: "family_medicine" },
@@ -211,9 +197,10 @@ describe("book_appointment", () => {
 
   it("replays a retried request instead of booking twice", async () => {
     const slot = await firstSlot();
-    const body = { patientId: JOHN_1980, slotToken: slot.slotToken, reason: "ankle" };
-    const first = await t.post("/appointments", body, "retry-1");
-    const second = await t.post("/appointments", body, "retry-1");
+    const john = await t.caller(JOHN_1980);
+    const body = { slotToken: slot.slotToken, reason: "ankle" };
+    const first = await john.post("/appointments", body, "retry-1");
+    const second = await john.post("/appointments", body, "retry-1");
     expect(second.body.data).toMatchObject({
       appointmentId: first.body.data.appointmentId,
       replayed: true,
@@ -226,19 +213,19 @@ describe("cancel and reschedule", () => {
   async function book(specialty = "orthopedics", index = 0) {
     const slots = (await t.post("/availability", { specialty, date: TUESDAY, doctorId: DR_CHEN }))
       .body.data.slots;
-    const res = await t.post<ApiResult>("/appointments", {
-      patientId: JOHN_1980,
+    const john = await t.caller(JOHN_1980);
+    const res = await john.post<ApiResult>("/appointments", {
       slotToken: slots[index].slotToken,
       reason: "ankle",
     });
-    return { appointmentId: res.body.data.appointmentId as string, slots };
+    return { appointmentId: res.body.data.appointmentId as string, slots, john };
   }
 
   it("cancels, frees the slot, and is idempotent", async () => {
-    const { appointmentId, slots } = await book();
-    const res = await t.post(`/appointments/${appointmentId}/cancel`, { patientId: JOHN_1980 });
+    const { appointmentId, slots, john } = await book();
+    const res = await john.post(`/appointments/${appointmentId}/cancel`, {});
     expect(res.body.data).toMatchObject({ status: "cancelled", alreadyCancelled: false });
-    const again = await t.post(`/appointments/${appointmentId}/cancel`, { patientId: JOHN_1980 });
+    const again = await john.post(`/appointments/${appointmentId}/cancel`, {});
     expect(again.body.data.alreadyCancelled).toBe(true);
     const freed = await t.post("/availability", {
       specialty: "orthopedics",
@@ -250,14 +237,14 @@ describe("cancel and reschedule", () => {
 
   it("hides whether another patient's appointment exists", async () => {
     const { appointmentId } = await book();
-    const res = await t.post(`/appointments/${appointmentId}/cancel`, { patientId: ALICE });
+    const alice = await t.caller(ALICE);
+    const res = await alice.post(`/appointments/${appointmentId}/cancel`, {});
     expect(res.body.error?.code).toBe("NOT_YOUR_APPOINTMENT");
   });
 
   it("moves an appointment and records both sides of the history", async () => {
-    const { appointmentId, slots } = await book();
-    const res = await t.post(`/appointments/${appointmentId}/reschedule`, {
-      patientId: JOHN_1980,
+    const { appointmentId, slots, john } = await book();
+    const res = await john.post(`/appointments/${appointmentId}/reschedule`, {
       slotToken: slots[2].slotToken,
     });
     expect(res.body.data).toMatchObject({
@@ -272,11 +259,33 @@ describe("cancel and reschedule", () => {
     ]);
   });
 
-  it("keeps the original when the new slot was taken", async () => {
-    const { appointmentId, slots } = await book();
-    await t.post("/appointments", { patientId: ALICE, slotToken: slots[3].slotToken, reason: "x" });
-    const res = await t.post(`/appointments/${appointmentId}/reschedule`, {
+  it("links both sides of a reschedule in the admin snapshot", async () => {
+    const { appointmentId, slots, john } = await book();
+    const res = await john.post(`/appointments/${appointmentId}/reschedule`, {
+      slotToken: slots[2].slotToken,
+    });
+    const movedId = res.body.data.appointmentId as string;
+    const snapshot = await t.call<AdminSnapshot>("GET", "/admin/snapshot");
+    const byId = new Map(snapshot.body.appointments.map((a) => [a.id, a]));
+    expect(byId.get(appointmentId)).toMatchObject({
+      status: "cancelled",
       patientId: JOHN_1980,
+      doctorId: DR_CHEN,
+      rescheduledTo: movedId,
+      rescheduledFrom: null,
+    });
+    expect(byId.get(movedId)).toMatchObject({
+      status: "booked",
+      rescheduledTo: null,
+      rescheduledFrom: appointmentId,
+    });
+  });
+
+  it("keeps the original when the new slot was taken", async () => {
+    const { appointmentId, slots, john } = await book();
+    const alice = await t.caller(ALICE);
+    await alice.post("/appointments", { slotToken: slots[3].slotToken, reason: "x" });
+    const res = await john.post(`/appointments/${appointmentId}/reschedule`, {
       slotToken: slots[3].slotToken,
     });
     expect(res.body.error?.code).toBe("SLOT_TAKEN");

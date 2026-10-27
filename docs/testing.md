@@ -24,6 +24,7 @@
 - `CallSession` tool loop with `ScriptedLlmProvider` — tool result fed back, errors surfaced, barge-in aborts.
 - Integrator pure logic — `ClinicTime` across DST changes and independent of the host's `TZ`, `slotToken` sign/verify/expiry, request hashing for idempotency.
 - `normalizeName` (`packages/db`) — accents, case, punctuation, non-Latin letters.
+- Console Database panel (`apps/web/lib/database.ts`) — reschedule vs. cancellation status, search matching, a patient's or doctor's appointments.
 
 ## Integration (integrator + Postgres)
 

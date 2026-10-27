@@ -76,7 +76,7 @@ Browser   ──► │   └─► phoner  (Deployment, HPA on  │──► De
 
 - phoner needs sticky, long-lived connections: ALB with a long idle timeout, `preStop` hook + `terminationGracePeriodSeconds` long enough to drain active calls on deploy.
 - Scale phoner on a custom metric (active calls per pod), not CPU.
-- integrator is internal only (ClusterIP); the console's DB panel would go through an authenticated API.
+- integrator is internal only (ClusterIP) and still requires `INTEGRATOR_TOKEN` from phoner; `ADMIN_ENABLED` stays off, and the console's DB panel would go through an authenticated API.
 - With many integrator replicas, consider the transaction pooler (`DATABASE_POOL_MODE=transaction`).
 - Deploy via Helm or Kustomize from GitHub Actions using the GHCR images already built today.
 

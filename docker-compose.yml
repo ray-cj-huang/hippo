@@ -20,7 +20,7 @@ services:
   integrator:
     profiles: [app]
     build: { context: ., args: { APP: integrator } }
-    ports: ["4001:4001"]
+    ports: ["127.0.0.1:4001:4001"]
     env_file: .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres?sslmode=disable
@@ -30,7 +30,7 @@ services:
   phoner:
     profiles: [app]
     build: { context: ., args: { APP: phoner } }
-    ports: ["4000:4000"]
+    ports: ["127.0.0.1:4000:4000"]
     env_file: .env
     environment:
       INTEGRATOR_URL: http://integrator:4001

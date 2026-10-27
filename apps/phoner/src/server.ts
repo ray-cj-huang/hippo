@@ -12,7 +12,7 @@ import { HttpIntegrator } from "./tools/integrator";
 import { BrowserWsTransport } from "./transport/transport";
 
 export function createPhonerServer(config: Config) {
-  const integrator = new HttpIntegrator(config.integratorUrl);
+  const integrator = new HttpIntegrator(config.integratorUrl, config.integratorToken);
   const sessions = new Set<CallSession>();
 
   const http = createServer((req, res) => {

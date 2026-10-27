@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { CALL_ID_HEADER, TOOL_CALL_ID_HEADER } from "@hippo/contracts";
-import { createDb } from "@hippo/db";
+import { calls, createDb } from "@hippo/db";
 import { resetDatabase, seedClinic } from "@hippo/db/testing";
 import { createApp } from "../../src/app";
 import type { Config } from "../../src/config";
@@ -24,12 +25,16 @@ export const config: Config = {
   timezone: "America/Los_Angeles",
   bookingWindowDays: 30,
   corsOrigins: ["http://localhost:3000"],
+  serviceToken: "test-integrator-token-0123456789abcdef",
+  adminEnabled: true,
 };
 
-export function createTestApp() {
+export const AUTH = { authorization: `Bearer ${config.serviceToken}` };
+
+export function createTestApp(overrides: Partial<Config> = {}) {
   const { db, sql } = createDb({ url: TEST_DATABASE_URL, max: 25 });
   const clock = { now: MONDAY_8AM };
-  const ctx = createContext(db, config, () => clock.now);
+  const ctx = createContext(db, { ...config, ...overrides }, () => clock.now);
   const app = createApp(ctx);
 
   async function call<T = unknown>(
@@ -40,16 +45,37 @@ export function createTestApp() {
   ) {
     const res = await app.request(path, {
       method,
-      headers: { "content-type": "application/json", ...headers },
+      headers: { "content-type": "application/json", ...AUTH, ...headers },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     return { status: res.status, body: (await res.json()) as T };
   }
 
+  async function caller(patientId: string, callId: string = randomUUID()) {
+    await db
+      .insert(calls)
+      .values({ id: callId, patientId })
+      .onConflictDoUpdate({ target: calls.id, set: { patientId } });
+    const headers = { [CALL_ID_HEADER]: callId };
+    return {
+      callId,
+      post: <T = ApiResult>(path: string, body: unknown, toolCallId?: string) =>
+        call<T>(
+          "POST",
+          path,
+          body,
+          toolCallId ? { ...headers, [TOOL_CALL_ID_HEADER]: toolCallId } : headers,
+        ),
+      get: <T = ApiResult>(path: string) => call<T>("GET", path, undefined, headers),
+    };
+  }
+
   return {
+    app,
     db,
     clock,
     call,
+    caller,
     post: <T = ApiResult>(path: string, body: unknown, toolCallId?: string, callId = CALL_A) =>
       call<T>(
         "POST",

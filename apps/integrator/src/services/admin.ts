@@ -1,11 +1,13 @@
 import type { AdminSnapshot } from "@hippo/contracts";
 import { appointments, doctors, patients, specialties } from "@hippo/db";
 import { desc, eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { Ctx } from "../context";
 
 const LIMIT = 100;
 
 export async function adminSnapshot(ctx: Ctx): Promise<AdminSnapshot> {
+  const previous = alias(appointments, "previous");
   const [doctorRows, patientRows, appointmentRows] = await Promise.all([
     ctx.db
       .select({
@@ -23,6 +25,8 @@ export async function adminSnapshot(ctx: Ctx): Promise<AdminSnapshot> {
     ctx.db
       .select({
         id: appointments.id,
+        patientId: appointments.patientId,
+        doctorId: appointments.doctorId,
         patientFirst: patients.firstName,
         patientLast: patients.lastName,
         title: doctors.title,
@@ -32,12 +36,15 @@ export async function adminSnapshot(ctx: Ctx): Promise<AdminSnapshot> {
         startAt: appointments.startAt,
         status: appointments.status,
         reason: appointments.reason,
+        rescheduledTo: appointments.rescheduledTo,
+        rescheduledFrom: previous.id,
         createdAt: appointments.createdAt,
       })
       .from(appointments)
       .innerJoin(patients, eq(patients.id, appointments.patientId))
       .innerJoin(doctors, eq(doctors.id, appointments.doctorId))
       .innerJoin(specialties, eq(specialties.id, doctors.specialtyId))
+      .leftJoin(previous, eq(previous.rescheduledTo, appointments.id))
       .orderBy(desc(appointments.updatedAt))
       .limit(LIMIT),
   ]);
@@ -58,13 +65,17 @@ export async function adminSnapshot(ctx: Ctx): Promise<AdminSnapshot> {
     })),
     appointments: appointmentRows.map((a) => ({
       id: a.id,
+      patientId: a.patientId,
       patientName: `${a.patientFirst} ${a.patientLast}`,
+      doctorId: a.doctorId,
       doctorName: `${a.title} ${a.doctorFirst} ${a.doctorLast}`,
       specialty: a.specialty,
       startAt: a.startAt.toISOString(),
       label: ctx.time.label(a.startAt),
       status: a.status,
       reason: a.reason,
+      rescheduledTo: a.rescheduledTo,
+      rescheduledFrom: a.rescheduledFrom,
       createdAt: a.createdAt.toISOString(),
     })),
   };

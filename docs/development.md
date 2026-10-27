@@ -10,7 +10,7 @@
 
 Keep the production database URL in `.env` as `PROD_DATABASE_URL`, never `DATABASE_URL`; `pnpm db:migrate` and `pnpm db:seed` refuse non-local hosts.
 
-API keys in `.env` (copy `.env.example`): `DEEPGRAM_API_KEY`, `CARTESIA_API_KEY`, `GEMINI_API_KEY` (and `ANTHROPIC_API_KEY` if using Claude).
+API keys in `.env` (copy `.env.example`): `DEEPGRAM_API_KEY`, `CARTESIA_API_KEY`, `GEMINI_API_KEY`.
 
 ## First run
 

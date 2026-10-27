@@ -27,10 +27,20 @@ export interface Integrator {
 }
 
 export class HttpIntegrator implements Integrator {
-  constructor(private readonly baseUrl: string) {}
+  private readonly auth: Record<string, string>;
+
+  constructor(
+    private readonly baseUrl: string,
+    token: string,
+  ) {
+    this.auth = { authorization: `Bearer ${token}` };
+  }
 
   async clinic() {
-    const res = await fetch(`${this.baseUrl}/clinic`, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+    const res = await fetch(`${this.baseUrl}/clinic`, {
+      headers: this.auth,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
     return Clinic.parse(await res.json());
   }
 
@@ -51,6 +61,7 @@ export class HttpIntegrator implements Integrator {
       const res = await fetch(`${this.baseUrl}${request.path}`, {
         method: request.method,
         headers: {
+          ...this.auth,
           "content-type": "application/json",
           [TOOL_CALL_ID_HEADER]: request.toolCallId,
           [CALL_ID_HEADER]: request.callId,
@@ -97,7 +108,7 @@ export class HttpIntegrator implements Integrator {
   private post(path: string, body: unknown) {
     return fetch(`${this.baseUrl}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { ...this.auth, "content-type": "application/json" },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
