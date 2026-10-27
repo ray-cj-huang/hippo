@@ -1,0 +1,6 @@
+turns:
+  - - say: Let me check that.
+    - tool: get_availability
+      args: { specialty: dermatology, date: "$date.nextWednesday" }
+    - say: I found a few openings for you. The first one is in the morning. There is another in the early afternoon. The last one is late in the day. All of them are with Dr. Patel. She is very popular with our patients. Which one works best for you?
+  - - say: Sure, go ahead.

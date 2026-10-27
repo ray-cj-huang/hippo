@@ -1,0 +1,4 @@
+{
+  "extends": "@hippo/tsconfig/library.json",
+  "include": ["src", "test", "drizzle.config.ts"]
+}

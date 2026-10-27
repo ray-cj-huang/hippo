@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@source "./";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-background: oklch(0.99 0.002 240);
+  --color-foreground: oklch(0.2 0.02 255);
+  --color-surface: oklch(1 0 0);
+  --color-muted: oklch(0.96 0.005 250);
+  --color-muted-foreground: oklch(0.52 0.02 255);
+  --color-border: oklch(0.91 0.008 250);
+  --color-primary: oklch(0.55 0.13 175);
+  --color-primary-foreground: oklch(0.99 0 0);
+  --color-danger: oklch(0.58 0.2 25);
+  --color-warning: oklch(0.75 0.15 75);
+  --color-success: oklch(0.6 0.14 155);
+  --color-info: oklch(0.6 0.12 245);
+
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: oklch(0.17 0.015 255);
+    --color-foreground: oklch(0.95 0.005 250);
+    --color-surface: oklch(0.21 0.015 255);
+    --color-muted: oklch(0.25 0.015 255);
+    --color-muted-foreground: oklch(0.7 0.015 255);
+    --color-border: oklch(0.3 0.015 255);
+  }
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}

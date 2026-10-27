@@ -1,0 +1,10 @@
+@import "@hippo/ui/styles.css";
+
+@source "../app";
+@source "../components";
+@source "../../../packages/ui/src";
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}

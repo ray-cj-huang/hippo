@@ -1,0 +1,32 @@
+{
+  "name": "@hippo/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
+    "migrate:prod": "tsx --env-file-if-exists=../../.env src/migrate.ts --prod",
+    "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.4",
+    "postgres": "3.4.9",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@hippo/tsconfig": "workspace:*",
+    "drizzle-kit": "0.31.11",
+    "tsx": "4.23.15",
+    "vitest": "5.0.5"
+  }
+}

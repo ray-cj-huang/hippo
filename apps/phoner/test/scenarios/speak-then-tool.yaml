@@ -1,0 +1,6 @@
+turns:
+  - - say: Let me look you up. This can take a moment. Our system is a little slow today. Thanks for waiting.
+    - tool: verify_patient
+      args: { firstName: John, lastName: Smith, dob: "1980-05-12", callerConfirmed: true }
+    - say: Found you, John.
+  - - say: Sure, go ahead.

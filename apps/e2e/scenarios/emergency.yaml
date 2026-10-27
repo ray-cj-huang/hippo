@@ -1,0 +1,4 @@
+turns:
+  - - say: That sounds like it could be an emergency. Please hang up and call 911 right now.
+    - tool: end_call
+      args: { reason: emergency }

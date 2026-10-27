@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "adr-skill": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "skillPath": "skills/adr-skill/SKILL.md",
+      "computedHash": "99558cced2e3f911adf3b7badb39eee3feb30ba96789aafe09dc8b245b1a160d"
+    }
+  }
+}

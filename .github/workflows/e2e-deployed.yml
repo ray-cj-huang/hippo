@@ -1,0 +1,29 @@
+name: E2E (deployed)
+
+on:
+  deployment_status:
+
+jobs:
+  smoke:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @hippo/e2e...
+      - run: pnpm --filter @hippo/e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e:deployed
+        env:
+          BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-report-deployed
+          path: apps/e2e/test-results
+          retention-days: 7

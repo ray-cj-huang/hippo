@@ -1,0 +1,4 @@
+{
+  "extends": "@hippo/tsconfig/node.json",
+  "include": ["src", "test", "tsup.config.ts"]
+}

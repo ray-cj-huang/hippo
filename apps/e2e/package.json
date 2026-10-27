@@ -1,0 +1,19 @@
+{
+  "name": "@hippo/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "playwright test --project=dev",
+    "e2e:live": "playwright test --project=live",
+    "e2e:deployed": "playwright test --project=deployed",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@hippo/db": "workspace:*",
+    "@hippo/tsconfig": "workspace:*",
+    "@playwright/test": "1.64.1",
+    "drizzle-orm": "0.45.4",
+    "postgres": "3.4.9"
+  }
+}

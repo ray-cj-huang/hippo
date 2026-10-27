@@ -1,0 +1,41 @@
+{
+  "name": "hippo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "kill": "kill $(lsof -t -a -c node -iTCP:3000 -iTCP:4000 -iTCP:4001 -sTCP:LISTEN) 2>/dev/null || true",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:unit": "turbo run test:unit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "e2e": "pnpm --filter @hippo/e2e e2e",
+    "e2e:live": "pnpm --filter @hippo/e2e e2e:live",
+    "e2e:deployed": "pnpm --filter @hippo/e2e e2e:deployed",
+    "db:generate": "pnpm --filter @hippo/db generate",
+    "db:migrate": "pnpm --filter @hippo/db migrate",
+    "db:migrate:prod": "pnpm --filter @hippo/db migrate:prod",
+    "db:seed": "pnpm --filter @hippo/db seed",
+    "db:studio": "pnpm --filter @hippo/db studio",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@types/node": "^24.19.2",
+    "husky": "9.1.7",
+    "lint-staged": "17.6.0",
+    "turbo": "2.11.10",
+    "typescript": "6.0.3"
+  }
+}

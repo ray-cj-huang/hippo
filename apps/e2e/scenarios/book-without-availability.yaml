@@ -1,0 +1,6 @@
+turns:
+  - - tool: verify_patient
+      args: { firstName: John, lastName: Smith, dob: "1992-11-30", callerConfirmed: true }
+    - tool: book_appointment
+      args: { slotId: slot_1, reason: checkup }
+    - say: I need to check availability first.

@@ -1,0 +1,27 @@
+# One list of agent steps per caller turn. "$tool.path" reads the latest result of a tool;
+# "$date.nextMonday" is the next Monday in clinic time.
+turns:
+  - - say: I'm sorry to hear that. I can book you with orthopedics. Can I have your first and last name?
+  - - say: Thanks. That's M-A-R-I-A, G-O-N-Z-A-L-E-Z. Is that right? And what's your date of birth?
+  - - tool: verify_patient
+      args: { firstName: Maria, lastName: Gonzalez, dob: "1990-03-03", callerConfirmed: true }
+    - say: I don't see you yet. Let me double-check the spelling. M, A, R, I, A, G, O, N, Z, A, L, E, Z. Is that right?
+  - - say: Thanks. Are you a new patient with us?
+  - - tool: verify_patient
+      args:
+        {
+          firstName: Maria,
+          lastName: Gonzalez,
+          dob: "1990-03-03",
+          callerConfirmed: true,
+          newPatient: true,
+        }
+    - say: Welcome! Let me check orthopedics for you.
+    - tool: get_availability
+      args: { specialty: orthopedics, date: "$date.nextMonday" }
+    - say: The first opening is with Dr. Lisa Chen. Shall I book it?
+  - - tool: book_appointment
+      args: { slotId: "$get_availability.slots.0.slotId", reason: ankle injury }
+    - say: You're all set. Anything else I can help with?
+  - - say: Thank you for calling. Feel better soon. Goodbye!
+    - tool: end_call

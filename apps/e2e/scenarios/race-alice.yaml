@@ -1,0 +1,9 @@
+turns:
+  - - tool: verify_patient
+      args: { firstName: Alice, lastName: Nguyen, dob: "1975-02-20", callerConfirmed: true }
+    - tool: get_availability
+      args: { specialty: dermatology, date: "$date.nextTuesday" }
+    - say: Dr. Hannah Lee has an opening. Shall I book it?
+  - - tool: book_appointment
+      args: { slotId: "$get_availability.slots.0.slotId", reason: rash }
+    - say: Done.

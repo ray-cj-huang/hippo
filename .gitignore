@@ -1,0 +1,15 @@
+node_modules
+.env
+.env.*
+!.env.example
+.next
+.next-e2e
+dist
+.turbo
+*.tsbuildinfo
+coverage
+playwright-report
+test-results
+apps/e2e/.auth
+.vercel
+.DS_Store

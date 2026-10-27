@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Hippo</title>
+  <circle cx="15" cy="14" r="6" fill="#119680"/>
+  <circle cx="49" cy="14" r="6" fill="#119680"/>
+  <circle cx="15" cy="14" r="3" fill="#f2a1b3"/>
+  <circle cx="49" cy="14" r="3" fill="#f2a1b3"/>
+  <ellipse cx="32" cy="30" rx="23" ry="19" fill="#14a38b"/>
+  <ellipse cx="32" cy="44" rx="27" ry="17" fill="#3dbca3"/>
+  <circle cx="23" cy="25" r="4" fill="#0f2a33"/>
+  <circle cx="41" cy="25" r="4" fill="#0f2a33"/>
+  <circle cx="24.4" cy="23.6" r="1.4" fill="#fff"/>
+  <circle cx="42.4" cy="23.6" r="1.4" fill="#fff"/>
+  <circle cx="23" cy="43" r="3" fill="#0b6b5a"/>
+  <circle cx="41" cy="43" r="3" fill="#0b6b5a"/>
+</svg>
