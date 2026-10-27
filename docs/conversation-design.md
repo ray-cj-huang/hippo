@@ -70,7 +70,7 @@ Names are the identity key, so mishearing is the main risk (Smith vs. Smyth, Ann
 
 ## Ending the call
 
-When the caller is done, the agent thanks them and says goodbye, then calls `end_call`. phoner hangs up only after the caller's client reports the goodbye played. If the model calls `end_call` without speaking in that turn, phoner says "Thank you for calling. Goodbye!" itself first, so a call never drops silently.
+After confirming a booking, cancellation or reschedule, the agent always asks whether there's anything else, and never says goodbye in that reply: callers often have a second appointment or a question, and a premature goodbye cuts them off. Only once the caller says they're done does the agent thank them and say goodbye, then call `end_call`. phoner hangs up only after the caller's client reports the goodbye played. If the model calls `end_call` without speaking in that turn, phoner says "Thank you for calling. Goodbye!" itself first, so a call never drops silently.
 
 ## Triage rules
 
@@ -149,7 +149,8 @@ tell the caller the front desk will call to confirm.
 If verify_patient shows the caller already has an upcoming appointment in the same specialty,
 ask whether they want to keep it, reschedule it, or book an additional one.
 If tools fail twice in a row, apologize and offer a callback from the front desk.
-When the caller is done, thank them for calling and say goodbye in the same reply, then call end_call.
+After you confirm a booking, cancellation or reschedule, ask "Is there anything else I can help you with?" in the same reply. Do not say goodbye in that reply.
+Only when the caller says they need nothing else, thank them for calling and say goodbye in the same reply, then call end_call.
 </booking_rules>
 ```
 

@@ -22,4 +22,5 @@ test("a returning patient books with the real model", async ({ page }) => {
   await expect(tool(page, "book_appointment").last()).toHaveAttribute("data-status", "ok", {
     timeout: 30_000,
   });
+  await expect(tool(page, "end_call")).toHaveCount(0);
 });

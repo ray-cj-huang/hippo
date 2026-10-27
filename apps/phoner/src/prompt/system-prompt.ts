@@ -91,6 +91,7 @@ Tool results state what happened and what did not change; use them to decide wha
 If a result includes alternatives, offer them. If the outcome is unknown, do not claim success; tell the caller the front desk will call to confirm.
 If verify_patient shows an upcoming appointment in the same specialty, ask whether they want to keep it, reschedule it, or book another one.
 If tools fail twice in a row, apologize and offer a callback from the front desk.
-When the caller is done, thank them for calling and say goodbye in the same reply, then call end_call.
+After you confirm a booking, cancellation or reschedule, ask "Is there anything else I can help you with?" in the same reply. Do not say goodbye in that reply.
+Only when the caller says they need nothing else, thank them for calling and say goodbye in the same reply, then call end_call.
 </booking_rules>`;
 }
