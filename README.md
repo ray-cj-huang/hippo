@@ -1,15 +1,34 @@
 # Hippo
 
-A voice AI agent that schedules doctor appointments for a multi-specialty medical center.
+A voice agent that verifies callers and books, cancels or reschedules doctor appointments by phone.
 
-Callers talk to the agent; it verifies who they are (name + date of birth, spelled back and confirmed), works out which doctor or specialty they need, and books, cancels, reschedules or lists 30-minute appointments. Many callers can call at once: if two go for the same slot, the database lets exactly one win and the other is offered alternatives.
+```mermaid
+flowchart LR
+  caller(["Caller<br/>browser mic + speaker"])
 
-```
-browser mic ─► phoner ─► Deepgram Flux (STT, streaming)
-                   │
-                   ├─► Gemini Flash Lite / Claude Haiku (LLM, streaming + tools) ─► integrator ─► Postgres (Supabase)
-                   │
-                   └─► sentence chunks ─► guardrail ─► Cartesia (TTS) ─► browser speaker
+  subgraph web["apps/web · Next.js"]
+    console["Call console"]
+  end
+
+  subgraph phoner["apps/phoner · realtime voice"]
+    stt["STT<br/>Deepgram Flux"] --> turn["Turn manager<br/>barge-in"]
+    turn --> llm["LLM<br/>Gemini Flash Lite"]
+    llm --> chunk["Sentence chunker"] --> guard["Guardrail"] --> tts["TTS<br/>Cartesia"]
+    llm --> policy["ToolPolicy"]
+  end
+
+  subgraph integrator["apps/integrator · Hono"]
+    api["Scheduling rules<br/>verify · availability · book"]
+  end
+
+  db[("Postgres<br/>unique slot index")]
+
+  caller <--> console
+  console -- "WebSocket · PCM16 audio + events" --> stt
+  tts -- "audio" --> console
+  policy -- "HTTP tool calls" --> api
+  api --> db
+  console -. "read-only" .-> api
 ```
 
 ## Repository
