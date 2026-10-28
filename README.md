@@ -3,32 +3,24 @@
 A voice agent that verifies callers and books, cancels or reschedules doctor appointments by phone.
 
 ```mermaid
-flowchart LR
-  caller(["Caller<br/>browser mic + speaker"])
-
-  subgraph web["apps/web · Next.js"]
-    console["Call console"]
-  end
+flowchart TB
+  caller(["Caller · browser mic + speaker"])
+  web["apps/web · Next.js call console"]
 
   subgraph phoner["apps/phoner · realtime voice"]
-    stt["STT<br/>Deepgram Flux"] --> turn["Turn manager<br/>barge-in"]
-    turn --> llm["LLM<br/>Gemini Flash Lite"]
-    llm --> chunk["Sentence chunker"] --> guard["Guardrail"] --> tts["TTS<br/>Cartesia"]
-    llm --> policy["ToolPolicy"]
+    direction LR
+    stt["STT<br/>Deepgram Flux"] --> llm["LLM<br/>Gemini Flash Lite"]
+    llm --> guard["Sentence chunker<br/>+ guardrail"] --> tts["TTS<br/>Cartesia"]
   end
 
-  subgraph integrator["apps/integrator · Hono"]
-    api["Scheduling rules<br/>verify · availability · book"]
-  end
-
+  integrator["apps/integrator · Hono<br/>scheduling rules"]
   db[("Postgres<br/>unique slot index")]
 
-  caller <--> console
-  console -- "WebSocket · PCM16 audio + events" --> stt
-  tts -- "audio" --> console
-  policy -- "HTTP tool calls" --> api
-  api --> db
-  console -. "read-only" .-> api
+  caller <--> web
+  web <-- "WebSocket · audio + events" --> phoner
+  llm -- "HTTP tool calls<br/>(ToolPolicy-gated)" --> integrator
+  web -. "read-only" .-> integrator
+  integrator --> db
 ```
 
 ## Repository

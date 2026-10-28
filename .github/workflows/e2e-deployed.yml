@@ -5,7 +5,8 @@ on:
 
 jobs:
   smoke:
-    if: github.event.deployment_status.state == 'success'
+    # Release's `production` environment also emits deployment_status, with a GitHub run URL.
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
