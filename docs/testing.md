@@ -77,5 +77,5 @@ Commands: `pnpm e2e`, `pnpm e2e:live`, `pnpm e2e:deployed`. Traces and videos ar
 ## What CI runs
 
 - Every PR and push to main: lint, format check, typecheck, unit, integration, build, `e2e` (`dev` project).
-- After each successful Vercel deployment (GitHub `deployment_status`): `e2e:deployed` against that URL.
+- After each successful Vercel deployment (Vercel `repository_dispatch` event `vercel.deployment.success`): `e2e:deployed` against that URL.
 - `e2e:live`: manually (`workflow_dispatch`) — it costs API credits.

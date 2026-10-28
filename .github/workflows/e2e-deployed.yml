@@ -1,16 +1,17 @@
 name: E2E (deployed)
 
 on:
-  deployment_status:
+  repository_dispatch:
+    types: [vercel.deployment.success]
 
 jobs:
   smoke:
-    # Release's `production` environment also emits deployment_status, with a GitHub run URL.
-    if: github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.client_payload.git.sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -20,7 +21,7 @@ jobs:
       - run: pnpm --filter @hippo/e2e exec playwright install --with-deps chromium
       - run: pnpm e2e:deployed
         env:
-          BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+          BASE_URL: ${{ github.event.client_payload.url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       - uses: actions/upload-artifact@v5
         if: failure()

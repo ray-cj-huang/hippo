@@ -15,7 +15,7 @@ Vercel serverless functions can't hold a call's WebSocket open for minutes, so p
 
 ```
 PR opened ──► ci.yml: install → lint (Biome) → typecheck → test (Postgres service) → build → e2e (dev)
-         └──► Vercel preview deploy ──► e2e-deployed.yml (deployment_status) → Playwright smoke on preview URL
+         └──► Vercel preview deploy ──► e2e-deployed.yml (vercel.deployment.success) → Playwright smoke on preview URL
 
 merge to main ──► ci.yml (same checks)
               ├─► release.yml: migrate prod DB (environment: production) → build & push phoner/integrator images to GHCR
